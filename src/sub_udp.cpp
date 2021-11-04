@@ -5,16 +5,18 @@
 #include <string>
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
+#include "std_msgs/msg/float64.hpp"
 #include "simple_udp/simple_udp.h"
+#include "simple_udp/simple_msgs.h"
 
-template <class sub_type>
 class MinimalPublisher : public rclcpp::Node
 {
 public:
-  MinimalPublisher(std::string topic_type, std::string topic_name)
-  : Node(topic_name), udp0("127.0.0.1", 4001), topic_type_(topic_type), topic_name_(topic_name), close_(false)
+  MinimalPublisher(std::string topic_name="bridge_node")
+  : Node(topic_name), udp0("127.0.0.1", 4001), topic_name_(topic_name), close_(false)
   {
-    publisher_ = this->create_publisher<sub_type>(topic_name_, 10);
+    string_publisher_ = this->create_publisher<std_msgs::msg::String>("string", 10);
+    float64_publisher_ = this->create_publisher<std_msgs::msg::Float64>("double", 10);
     udp0.udp_bind();
     udp_subscribe_thread_ = std::thread(std::bind(&MinimalPublisher::subUdpThread, this));
   }
@@ -23,32 +25,41 @@ public:
     close_ = true;
   }
 private:
+  simple_udp::msgs subscribe_udp()
+  {
+    simple_udp::msgs topic_type;
+    udp0.udp_recv((char*)&topic_type, sizeof(simple_udp::msgs));
+    std::string topic_name = udp0.udp_recv();
+    return topic_type;
+  }
+     
   void subUdpThread()
   {
     while(!close_)
     {
-      std::string topic_type = udp0.udp_recv();
-      std::string topic_name = udp0.udp_recv();
-      //double dval = 0;
-      if(topic_type == "std_msgs::msg::String")
+      simple_udp::msgs topic_type = subscribe_udp();
+      switch(topic_type)
       {
-        std::string data = udp0.udp_recv();
-        printf("recv:%s, %s, %s\n", topic_type.c_str(), topic_name.c_str(), data.c_str());
-        std_msgs::msg::String pub_msg;
-        pub_msg.data = data;
-        publisher_->publish(pub_msg);
+        case simple_udp::msgs::string:
+        {
+          std_msgs::msg::String msg;
+          msg.data = udp0.udp_recv();
+          string_publisher_->publish(msg);
+        }
+        break;
+        case simple_udp::msgs::float64:
+        {
+          std_msgs::msg::Float64 msg;
+          udp0.udp_recv((char*)&msg.data, sizeof(double));
+          float64_publisher_->publish(msg);
+        }
       }
-      /*else if(topic_type == "std_msgs::msg::Float64")
-      {
-        udp0.udp_recv((char*)&dval, sizeof(double));
-        printf("recv:%s, %s, %f\n", topic_type.c_str(), topic_name.c_str(), dval);
-      }*/
     }
   }
-  typename rclcpp::Publisher<sub_type>::SharedPtr publisher_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr string_publisher_;
+  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr float64_publisher_;
   SimpleUdp udp0;
   std::thread udp_subscribe_thread_;
-  std::string topic_type_;
   std::string topic_name_;
   bool close_;
 };
@@ -57,7 +68,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv){
 
   rclcpp::init(argc, argv);
   rclcpp::executors::SingleThreadedExecutor exec;
-  auto node1 = std::make_shared<MinimalPublisher<std_msgs::msg::String>>("std_msgs::msg::String", "string");
+  auto node1 = std::make_shared<MinimalPublisher>();
   exec.add_node(node1);
   exec.spin();
   rclcpp::shutdown();

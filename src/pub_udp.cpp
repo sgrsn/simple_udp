@@ -7,12 +7,13 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "simple_udp/simple_udp.h"
+#include "simple_udp/simple_msgs.h"
 
 template <class sub_type>
 class MinimalSubscriber : public rclcpp::Node
 {
 public:
-  MinimalSubscriber(std::string topic_type, std::string topic_name)
+  MinimalSubscriber(simple_udp::msgs topic_type, std::string topic_name)
   : Node(topic_name), udp0("127.0.0.1", 4001), topic_type_(topic_type), topic_name_(topic_name)
   {
     subscription_ = this->create_subscription<sub_type>(topic_name, 10, std::bind(&MinimalSubscriber::callback, this, std::placeholders::_1));
@@ -21,7 +22,7 @@ public:
 private:
   void callback(typename sub_type::SharedPtr msg)
   {
-    udp0.udp_send<std::string>(topic_type_);
+    udp0.udp_send<simple_udp::msgs>(topic_type_);
     udp0.udp_send<std::string>(topic_name_);
     send_raw_data(msg);
   }
@@ -31,7 +32,7 @@ private:
   }
   typename rclcpp::Subscription<sub_type>::SharedPtr subscription_;
   SimpleUdp udp0;
-  std::string topic_type_;
+  simple_udp::msgs topic_type_;
   std::string topic_name_;
 };
 
@@ -53,9 +54,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv)
 { 
   rclcpp::init(argc, argv);
   rclcpp::executors::SingleThreadedExecutor exec;
-  auto node1 = std::make_shared<MinimalSubscriber<std_msgs::msg::String>>("std_msgs::msg::String", "simple_udp_string");
+  auto node1 = std::make_shared<MinimalSubscriber<std_msgs::msg::String>>(simple_udp::msgs::string, "simple_udp_string");
   exec.add_node(node1);
-  auto node2 = std::make_shared<MinimalSubscriber<std_msgs::msg::Float64>>("std_msgs::msg::Float64", "simple_udp_double");
+  auto node2 = std::make_shared<MinimalSubscriber<std_msgs::msg::Float64>>(simple_udp::msgs::float64, "simple_udp_double");
   exec.add_node(node2);
   exec.spin();
   rclcpp::shutdown();
