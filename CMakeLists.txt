@@ -34,10 +34,19 @@ target_include_directories(sub_udp PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
+add_executable(mros_bridge_demo src/mros_bridge_demo.cpp)
+ament_target_dependencies(mros_bridge_demo rclcpp std_msgs)
+target_include_directories(mros_bridge_demo PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
 install(TARGETS pub_udp
   DESTINATION lib/${PROJECT_NAME})
 
 install(TARGETS sub_udp
+  DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS mros_bridge_demo
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

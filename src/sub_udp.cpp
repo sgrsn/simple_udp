@@ -13,7 +13,7 @@ class MinimalPublisher : public rclcpp::Node
 {
 public:
   MinimalPublisher(std::string topic_name="bridge_node")
-  : Node(topic_name), udp0("127.0.0.1", 4001), topic_name_(topic_name), close_(false)
+  : Node(topic_name), udp0("0.0.0.0", 4001), topic_name_(topic_name), close_(false)
   {
     string_publisher_ = this->create_publisher<std_msgs::msg::String>("string", 10);
     float64_publisher_ = this->create_publisher<std_msgs::msg::Float64>("double", 10);
@@ -38,6 +38,7 @@ private:
     while(!close_)
     {
       simple_udp::msgs topic_type = subscribe_udp();
+      printf("recv\r\n");
       switch(topic_type)
       {
         case simple_udp::msgs::string:
