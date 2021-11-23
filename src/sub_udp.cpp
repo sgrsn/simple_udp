@@ -38,7 +38,6 @@ private:
     while(!close_)
     {
       simple_udp::msgs topic_type = subscribe_udp();
-      printf("recv\r\n");
       switch(topic_type)
       {
         case simple_udp::msgs::string:
